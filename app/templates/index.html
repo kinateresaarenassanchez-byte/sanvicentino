@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+
+<!-- Carrusel profesional -->
+<section class="relative w-full max-w-5xl mx-auto mt-2 fade-section opacity-0 transition-opacity duration-1000">
+  <div class="relative rounded-xl shadow-2xl overflow-hidden border border-blue-200">
+    <div id="carrusel" class="carousel-inner flex transition-transform duration-700 ease-in-out">
+      <div class="carousel-item min-w-full h-72 md:h-96 flex items-center justify-center bg-gradient-to-r from-blue-400 to-blue-200">
+        <img src="{{ url_for('static', filename='img/san vicentino.jpg') }}" class="w-full h-full object-cover object-center" alt="Slide 1" />
+      </div>
+      <div class="carousel-item min-w-full h-72 md:h-96 flex items-center justify-center bg-gradient-to-r from-green-400 to-green-200">
+        <img src="{{ url_for('static', filename='img/aguamedio.png') }}" class="w-full h-full object-cover object-center" alt="Slide 2" />
+      </div>
+      <div class="carousel-item min-w-full h-72 md:h-96 flex items-center justify-center bg-gradient-to-r from-pink-400 to-pink-200">
+        <img src="{{ url_for('static', filename='img/portadakarla.png') }}" class="w-full h-full object-cover object-center" alt="Slide 3" />
+      </div>
+    </div>
+    <!-- Botones -->
+    <button id="prev" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 hover:bg-blue-500 hover:text-white text-blue-700 px-3 py-2 rounded-full shadow-lg z-20 transition-all duration-300 border border-blue-300" title="Anterior" aria-label="Anterior">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+    </button>
+    <button id="next" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 hover:bg-blue-500 hover:text-white text-blue-700 px-3 py-2 rounded-full shadow-lg z-20 transition-all duration-300 border border-blue-300" title="Siguiente" aria-label="Siguiente">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </button>
+    <!-- Indicadores -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
+      <button class="carousel-indicator w-3 h-3 rounded-full bg-blue-300 border-2 border-white shadow transition-all duration-300" data-slide="0" title="Ir al slide 1" aria-label="Ir al slide 1"></button>
+      <button class="carousel-indicator w-3 h-3 rounded-full bg-blue-300 border-2 border-white shadow transition-all duration-300" data-slide="1" title="Ir al slide 2" aria-label="Ir al slide 2"></button>
+      <button class="carousel-indicator w-3 h-3 rounded-full bg-blue-300 border-2 border-white shadow transition-all duration-300" data-slide="2" title="Ir al slide 3" aria-label="Ir al slide 3"></button>
+    </div>
+  </div>
+</section>
+
+<!-- Parallax -->
+
+<section class="h-auto bg-fixed bg-gradient-to-r from-blue-200 to-white flex flex-col items-center justify-start py-3 fade-section opacity-0 transition-opacity duration-1000">
+<h2 class="text-4xl font-bold text-pink-500 drop-shadow-lg px-16">¡Descubre nuestras ofertas!</h2>
+  <!-- Grid de productos dinámicos -->
+  <div class="w-full max-w-6xl grid md:grid-cols-3 gap-4 mt-6 px-4">
+    {% if products %}
+      {% for product in products[:3] %}
+      <div class="bg-white rounded-lg shadow-lg transform hover:scale-105 transition duration-300">
+        <div class="relative">
+          <img src="{{ product.imagen }}" alt="{{ product.nombre }}" class="w-full h-48 object-cover rounded-t-lg" />
+          
+          <!-- Indicador de publicación (solo admin) -->
+          {% if current_user.is_authenticated and current_user.is_admin %}
+          <div class="absolute top-2 right-2">
+            {% if product.publicado %}
+            <span class="bg-green-500 text-white px-2 py-1 rounded text-xs font-semibold">✓ Publicado</span>
+            {% else %}
+            <span class="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-semibold">⚠ No Publicado</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="p-4">
+          <h2 class="text-xl font-semibold">{{ product.nombre }}</h2>
+          <p class="text-gray-600">{{ product.descripcion[:60] }}...</p>
+          <p class="text-lg font-bold text-green-600 my-2">S/. {{ "%.2f"|format(product.precio) }}</p>
+          
+          {% if product.stock > 0 %}
+          <button onclick="agregarAlCarrito({{ product.id }})" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-800 transition w-full">Comprar ahora</button>
+          {% else %}
+          <button disabled class="mt-4 bg-gray-400 text-white px-4 py-2 rounded w-full cursor-not-allowed">Agotado</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="col-span-3 text-center py-12">
+      <p class="text-gray-600 text-lg">No hay productos disponibles en este momento</p>
+    </div>
+    {% endif %}
+  </div>
+  <!-- Fin Grid de productos dinámicos -->
+  <!-- Letrero / Slide abajo -->
+  <div class="mt-8 relative w-full max-w-8xl mx-auto overflow-hidden">
+    <!-- Contenedor responsive: altura variable según breakpoint -->
+    <div class="relative w-full h-10 sm:h-12 md:h-14 lg:h-16">
+      <div class="absolute inset-0 animate-fade-slide animation-delay-6000">
+        <div class="w-full h-full flex items-center justify-center bg-pink-700 text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-white drop-shadow-lg text-center px-3 sm:px-6 leading-tight">
+          <span class="block truncate">Al CUIDADO DE LA SALUD DE NUESTROS HIJOS</span>
+        </div>
+      </div>
+      <div class="absolute inset-0 animate-fade-slide animation-delay-3000">
+        <div class="w-full h-full flex items-center justify-center bg-cyan-500 text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-white drop-shadow-lg text-center px-3 sm:px-6 leading-tight">
+          <span class="block truncate">UNICA COMO SU GENTE</span>
+        </div>
+      </div>
+      <div class="absolute inset-0 animate-fade-slide animation-delay-2000">
+        <div class="w-full h-full flex items-center justify-center bg-pink-700 text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-semibold text-white drop-shadow-lg text-center px-3 sm:px-6 leading-tight">
+          <span class="block truncate">SAN VICENTINO</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Fin Letrero -->
+  
+</section>
+
+<section class="h-64 sm:h-72 md:h-80 lg:h-96 xl:h-[400px] bg-fixed bg-gradient-to-r from-blue-200 to-white flex flex-col md:flex-row items-center justify-center fade-section opacity-0 transition-opacity duration-1000">
+  <!-- Galería tipo abanico con deslizamiento automático y responsive -->
+  <div id="fan-gallery" class="relative w-full max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl flex items-center justify-center h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96">
+    <div class="absolute inset-0 flex flex-col md:flex-row items-center justify-center">
+      <div id="fan-images" class="relative w-full h-56 sm:h-64 md:h-72 lg:h-80 xl:h-96 flex items-center justify-center">
+        <img src="{{ url_for('static', filename='img/agua.jpeg') }}" class="fan-img w-full h-full object-cover" alt="Imagen 1" />
+        <img src="{{ url_for('static', filename='img/sanvicentinoagua.jpg') }}" class="fan-img w-full h-full object-cover" alt="Imagen 2" />
+        <img src="{{ url_for('static', filename='img/bidon.jpg') }}" class="fan-img w-full h-full object-cover" alt="Imagen 3" />
+        <img src="{{ url_for('static', filename='img/aguasanvicentino.jfif') }}" class="fan-img w-full h-full object-cover" alt="Imagen 4" />
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<script>
+// Función para agregar productos al carrito desde la página de inicio
+function agregarAlCarrito(productId) {
+  // Capturar el evento y el botón ANTES de entrar en la promesa
+  const boton = event.target;
+  const productElement = boton.closest('.bg-white') || boton.closest('.group');
+  let productName = 'Producto';
+  
+  if (productElement) {
+    const nameElement = productElement.querySelector('h2');
+    if (nameElement) {
+      productName = nameElement.textContent.trim();
+    }
+  }
+  
+  // Verificar si el usuario está autenticado
+  fetch('/api/check-auth')
+    .then(response => response.json())
+    .then(data => {
+      if (!data.authenticated) {
+        // Si no está autenticado, redirigir al login
+        alert('Debes estar registrado para comprar. Redirigiendo al login...');
+        window.location.href = '{{ url_for("login") }}?next={{ url_for("index") }}';
+        return;
+      }
+      
+      // Si está autenticado, agregar al carrito con cantidad = 1 (sin preguntar)
+      const cantidad = 1;
+      
+      // Enviar petición para agregar al carrito
+      fetch(`/carrito/agregar/${productId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `cantidad=${cantidad}`
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Respuesta del servidor:', data);
+        
+        if (data.success) {
+          // Mostrar modal de éxito
+          showCartModal(productName);
+          
+          // Actualizar contador del carrito
+          const cartCountElements = document.querySelectorAll('.cart-count');
+          cartCountElements.forEach(el => {
+            el.textContent = data.cart_count;
+          });
+        } else {
+          alert(data.error || 'Error al agregar al carrito');
+        }
+      })
+      .catch(error => {
+        console.error('Error capturado:', error);
+        alert('Error al conectar con el servidor: ' + error.message);
+      });
+    })
+    .catch(error => {
+      console.error('Error de autenticación:', error);
+      alert('Error al verificar autenticación');
+    });
+}
+</script>
+
+{% endblock %}

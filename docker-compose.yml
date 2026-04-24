@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sanvicentino_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - db_data:/app/instance
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app/run.py
+      - DATABASE_URL=sqlite:////app/instance/sanvicentino.db
+    stdin_open: true
+    tty: true
+
+volumes:
+  app_data:
+  db_data:

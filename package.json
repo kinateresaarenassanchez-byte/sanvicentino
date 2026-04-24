@@ -1,0 +1,21 @@
+{
+  "name": "tienda_don_italo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --minify",
+    "build:css": "npx tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --minify",
+    "watch:css": "npx tailwindcss -i ./app/static/css/input.css -o ./app/static/css/output.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "stylelint-config-tailwindcss": "^1.0.0",
+    "tailwindcss": "^3.4.19"
+  }
+}
