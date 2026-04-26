@@ -23,7 +23,7 @@
             <!-- Categoría -->
             <div>
                 <label for="categoria" class="block text-gray-700 font-bold mb-2">Categoría *</label>
-                <select id="categoria" name="categoria" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                <select id="categoria" name="categoria" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" onchange="handleCategoryChange()">
                     <option value="">Selecciona una categoría</option>
                     <option value="Agua">Agua</option>
                     <option value="Bebidas">Bebidas</option>
@@ -33,6 +33,19 @@
                     <option value="Verduras">Verduras</option>
                     <option value="Otros">Otros</option>
                 </select>
+            </div>
+
+            <!-- Tipo de Agua (Aparece solo cuando se selecciona Agua) -->
+            <div id="agua-tipo-container" class="hidden">
+                <label for="tipo_agua" class="block text-gray-700 font-bold mb-2">Tipo de Agua *</label>
+                <select id="tipo_agua" name="tipo_agua" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition bg-green-50">
+                    <option value="">Selecciona un tipo de agua</option>
+                    <option value="Agua de mesa de Caja 20L">Agua de mesa de Caja 20L</option>
+                    <option value="Bidon de 20L">Bidon de 20L</option>
+                    <option value="Agua de mesa de 600ml">Agua de mesa de 600ml</option>
+                    <option value="Agua de mesa de 7L">Agua de mesa de 7L</option>
+                </select>
+                <p class="text-xs text-green-600 mt-1">ℹ️ Selecciona el tipo específico de agua</p>
             </div>
             
             <!-- Precio -->
@@ -147,5 +160,28 @@ function clearImagePreview() {
     document.getElementById('image-preview-container').classList.add('hidden');
     document.getElementById('image-preview').src = '';
 }
+
+// Función para manejar cambios en la categoría
+function handleCategoryChange() {
+    const categorySelect = document.getElementById('categoria');
+    const aguaContainer = document.getElementById('agua-tipo-container');
+    const tipoAguaSelect = document.getElementById('tipo_agua');
+    
+    if (categorySelect.value === 'Agua') {
+        // Mostrar el select de tipo de agua
+        aguaContainer.classList.remove('hidden');
+        tipoAguaSelect.setAttribute('required', 'required');
+    } else {
+        // Ocultar el select de tipo de agua
+        aguaContainer.classList.add('hidden');
+        tipoAguaSelect.removeAttribute('required');
+        tipoAguaSelect.value = '';
+    }
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    handleCategoryChange();
+});
 </script>
 {% endblock %}

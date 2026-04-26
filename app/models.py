@@ -33,6 +33,7 @@ class Product(db.Model):
     descripcion = db.Column(db.Text)
     precio = db.Column(db.Float, nullable=False)
     categoria = db.Column(db.String(100))
+    tipo_agua = db.Column(db.String(100))  # Nuevo campo para tipos específicos de agua
     imagen = db.Column(db.String(255))
     stock = db.Column(db.Integer, default=0)
     publicado = db.Column(db.Boolean, default=False)  # Solo visible si es True (o si es admin)
@@ -106,7 +107,7 @@ class OrderItem(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
     product_name = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)

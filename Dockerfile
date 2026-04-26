@@ -23,5 +23,5 @@ RUN mkdir -p /app/instance
 # Exponer puerto
 EXPOSE 5000
 
-# Ejecutar app directamente
-CMD python migrate_db.py && python init_db.py && python -u app/run.py
+# Ejecutar app directamente (sin inicialización, ya que la BD está lista)
+CMD python -u app/run.py

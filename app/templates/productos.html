@@ -7,9 +7,9 @@
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-4xl font-bold text-gray-800">Nuestros Productos</h1>
         {% if current_user.is_authenticated and current_user.is_admin %}
-        <a href="{{ url_for('crear_producto') }}" class="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-lg transition">
+        <button onclick="abrirModalCrearProducto()" class="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-lg transition">
             + Agregar Producto
-        </a>
+        </button>
         {% endif %}
     </div>
 
@@ -40,7 +40,11 @@
             
             <!-- Contenido -->
             <div class="p-6">
-                <p class="text-blue-600 text-sm font-semibold mb-2">{{ p.categoria }}</p>
+                <p class="text-blue-600 text-sm font-semibold mb-2">{{ p.categoria }}
+                    {% if p.categoria == 'Agua' and p.tipo_agua %}
+                        <span class="text-green-600 font-medium">• {{ p.tipo_agua }}</span>
+                    {% endif %}
+                </p>
                 
                 <!-- Nombre del producto (solo visible para admin) -->
                 {% if current_user.is_authenticated and current_user.is_admin %}
@@ -111,11 +115,9 @@
                         </form>
                         
                         <!-- Botón Eliminar -->
-                        <form method="POST" action="{{ url_for('eliminar_producto', product_id=p.id) }}" style="display:inline;" class="flex-1">
-                            <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg transition text-center" onclick="return confirm('¿Está seguro de que desea eliminar este producto?')">
-                                Eliminar
-                            </button>
-                        </form>
+                        <button type="button" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg transition text-center" onclick="confirmarEliminar({{ p.id }}, '{{ p.nombre }}')">
+                            Eliminar
+                        </button>
                     </div>
                     {% endif %}
                 </div>
@@ -134,7 +136,296 @@
     {% endif %}
 </div>
 
+<!-- Modal para Crear Producto -->
+<div id="crearProductoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-4 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
+        <div class="mt-3">
+            <!-- Header del Modal -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">Crear Nuevo Producto</h1>
+                <button onclick="cerrarModalCrearProducto()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Contenido del Formulario -->
+            <div class="bg-white rounded-lg p-6">
+                <form id="crearProductoForm" method="POST" enctype="multipart/form-data" action="{{ url_for('crear_producto') }}" class="space-y-6">
+                    <!-- Nombre -->
+                    <div>
+                        <label for="modal_nombre" class="block text-gray-700 font-bold mb-2">Nombre del Producto *</label>
+                        <input type="text" id="modal_nombre" name="nombre" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Ej: Agua Purificada">
+                    </div>
+                    
+                    <!-- Descripción -->
+                    <div>
+                        <label for="modal_descripcion" class="block text-gray-700 font-bold mb-2">Descripción</label>
+                        <textarea id="modal_descripcion" name="descripcion" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="Descripción del producto..."></textarea>
+                    </div>
+                    
+                    <!-- Categoría -->
+                    <div>
+                        <label for="modal_categoria" class="block text-gray-700 font-bold mb-2">Categoría *</label>
+                        <select id="modal_categoria" name="categoria" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" onchange="handleModalCategoryChange()">
+                            <option value="">Selecciona una categoría</option>
+                            <option value="Agua">Agua</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Lácteos">Lácteos</option>
+                            <option value="Frutas">Frutas</option>
+                            <option value="Verduras">Verduras</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Agua (Aparece solo cuando se selecciona Agua) -->
+                    <div id="modal_agua-tipo-container" class="hidden">
+                        <label for="modal_tipo_agua" class="block text-gray-700 font-bold mb-2">Tipo de Agua *</label>
+                        <select id="modal_tipo_agua" name="tipo_agua" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition bg-green-50">
+                            <option value="">Selecciona un tipo de agua</option>
+                            <option value="Agua de mesa de Caja 20L">Agua de mesa de Caja 20L</option>
+                            <option value="Bidon de 20L">Bidon de 20L</option>
+                            <option value="Agua de mesa de 600ml">Agua de mesa de 600ml</option>
+                            <option value="Agua de mesa de 7L">Agua de mesa de 7L</option>
+                        </select>
+                        <p class="text-xs text-green-600 mt-1">ℹ️ Selecciona el tipo específico de agua</p>
+                    </div>
+                    
+                    <!-- Precio -->
+                    <div>
+                        <label for="modal_precio" class="block text-gray-700 font-bold mb-2">Precio (S/.) *</label>
+                        <input type="number" id="modal_precio" name="precio" required step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="0.00">
+                    </div>
+                    
+                    <!-- Stock -->
+                    <div>
+                        <label for="modal_stock" class="block text-gray-700 font-bold mb-2">Stock Disponible *</label>
+                        <input type="number" id="modal_stock" name="stock" required min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" placeholder="0">
+                    </div>
+                    
+                    <!-- Sección de Imagen -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Imagen del Producto</h3>
+                        
+                        <!-- Opción 1: Subir Archivo -->
+                        <div class="mb-6">
+                            <label for="modal_imagen_archivo" class="block text-gray-700 font-bold mb-2">Subir Archivo de Imagen</label>
+                            <div class="relative">
+                                <input 
+                                    id="modal_imagen_archivo"
+                                    name="imagen_archivo" 
+                                    type="file" 
+                                    accept="image/*"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    onchange="previewModalImage(event)">
+                                <p class="text-xs text-gray-500 mt-1">Formatos aceptados: JPG, PNG, GIF, WebP (máx. 5MB)</p>
+                            </div>
+                            
+                            <!-- Vista Previa de Imagen -->
+                            <div id="modal_image-preview-container" class="mt-4 hidden">
+                                <p class="text-sm font-bold text-gray-700 mb-2">Vista Previa:</p>
+                                <img id="modal_image-preview" src="" alt="Vista previa" class="max-w-xs h-auto rounded-lg shadow-md border border-gray-300">
+                                <button type="button" onclick="clearModalImagePreview()" class="mt-2 text-sm text-red-600 hover:text-red-800 font-bold">
+                                    Limpiar selección
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Divisor O -->
+                        <div class="flex items-center my-6">
+                            <div class="flex-1 border-t border-gray-300"></div>
+                            <span class="px-4 text-gray-500 font-bold">O</span>
+                            <div class="flex-1 border-t border-gray-300"></div>
+                        </div>
+
+                        <!-- Opción 2: URL de Imagen -->
+                        <div>
+                            <label for="modal_imagen" class="block text-gray-700 font-bold mb-2">URL de Imagen (Alternativa)</label>
+                            <input 
+                                id="modal_imagen"
+                                name="imagen" 
+                                type="url"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="https://ejemplo.com/imagen.jpg">
+                            <p class="text-xs text-gray-500 mt-1">Si prefieres usar una URL externa en lugar de subir un archivo</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Botones -->
+                    <div class="flex gap-4 pt-6">
+                        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition duration-200 shadow-md">
+                            Crear Producto
+                        </button>
+                        <button type="button" onclick="cerrarModalCrearProducto()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación de eliminación -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mt-4" id="modalTitle">¿Eliminar producto?</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500" id="modalMessage">
+                    ¿Está seguro de que desea eliminar este producto? Esta acción no se puede deshacer.
+                </p>
+            </div>
+            <div class="flex items-center px-4 py-3">
+                <button id="cancelBtn" class="px-4 py-2 bg-gray-300 text-gray-900 text-base font-medium rounded-md w-full mr-2 shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Cancelar
+                </button>
+                <button id="confirmBtn" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300">
+                    Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Variables para el modal de eliminación
+let productToDelete = null;
+
+// Función para abrir el modal de crear producto
+function abrirModalCrearProducto() {
+    document.getElementById('crearProductoModal').classList.remove('hidden');
+    // Resetear el formulario
+    document.getElementById('crearProductoForm').reset();
+    // Ocultar elementos de preview
+    document.getElementById('modal_image-preview-container').classList.add('hidden');
+    // Resetear el select de agua
+    handleModalCategoryChange();
+}
+
+// Función para cerrar el modal de crear producto
+function cerrarModalCrearProducto() {
+    document.getElementById('crearProductoModal').classList.add('hidden');
+}
+
+// Función para manejar cambios en la categoría del modal
+function handleModalCategoryChange() {
+    const categorySelect = document.getElementById('modal_categoria');
+    const aguaContainer = document.getElementById('modal_agua-tipo-container');
+    const tipoAguaSelect = document.getElementById('modal_tipo_agua');
+    
+    if (categorySelect.value === 'Agua') {
+        // Mostrar el select de tipo de agua
+        aguaContainer.classList.remove('hidden');
+        tipoAguaSelect.setAttribute('required', 'required');
+    } else {
+        // Ocultar el select de tipo de agua
+        aguaContainer.classList.add('hidden');
+        tipoAguaSelect.removeAttribute('required');
+        tipoAguaSelect.value = '';
+    }
+}
+
+// Función para preview de imagen en el modal
+function previewModalImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('modal_image-preview');
+    const previewContainer = document.getElementById('modal_image-preview-container');
+    
+    if (file) {
+        // Validar tipo de archivo
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            alert('Por favor, selecciona un formato de imagen válido (JPG, PNG, GIF, WebP)');
+            event.target.value = '';
+            previewContainer.classList.add('hidden');
+            return;
+        }
+        
+        // Validar tamaño (máx 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('La imagen no puede superar 5MB');
+            event.target.value = '';
+            previewContainer.classList.add('hidden');
+            return;
+        }
+        
+        // Mostrar preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            previewContainer.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Función para limpiar preview de imagen en el modal
+function clearModalImagePreview() {
+    document.getElementById('modal_imagen_archivo').value = '';
+    document.getElementById('modal_image-preview-container').classList.add('hidden');
+    document.getElementById('modal_image-preview').src = '';
+}
+
+// Event listener para el formulario del modal
+document.getElementById('crearProductoForm').addEventListener('submit', function(e) {
+    // El formulario se enviará normalmente
+    // Después del envío, la página se recargará automáticamente si es exitoso
+    console.log('Enviando formulario de crear producto...');
+});
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('crearProductoModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModalCrearProducto();
+    }
+});
+
+// Función para mostrar el modal de confirmación
+function confirmarEliminar(productId, productName) {
+    productToDelete = productId;
+    document.getElementById('modalTitle').textContent = `¿Eliminar "${productName}"?`;
+    document.getElementById('modalMessage').textContent = `¿Está seguro de que desea eliminar "${productName}"? Esta acción no se puede deshacer.`;
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+// Función para cerrar el modal
+function cerrarModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    productToDelete = null;
+}
+
+// Función para confirmar la eliminación
+function confirmarEliminacion() {
+    if (productToDelete) {
+        // Crear y enviar el formulario
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/producto/eliminar/${productToDelete}`;
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Event listeners para los botones del modal
+document.getElementById('cancelBtn').addEventListener('click', cerrarModal);
+document.getElementById('confirmBtn').addEventListener('click', confirmarEliminacion);
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModal();
+    }
+});
+
 async function agregarAlCarrito(productId) {
     try {
         // Capturar el evento y el botón ANTES de entrar en la promesa

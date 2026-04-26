@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session, Response
 from flask_login import (
     LoginManager, login_user,
     login_required, logout_user, current_user
@@ -18,6 +18,9 @@ import uuid
 from datetime import datetime
 from sqlalchemy.exc import OperationalError
 from PIL import Image
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 from models import (
     db, User, Product, Cart, CartItem, Order, OrderItem, Payment
 )
@@ -496,6 +499,78 @@ def resumen_orden(order_id):
     return render_template('resumen_orden.html', order=order, cart_count=cart_count)
 
 
+@app.route('/orden/<int:order_id>/pdf')
+@login_required
+def orden_pdf(order_id):
+    order = Order.query.get(order_id)
+    if not order or order.user_id != current_user.id:
+        flash('Orden no encontrada o acceso denegado', 'danger')
+        return redirect(url_for('mis_ordenes'))
+
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    margin = 50
+    y = height - margin
+
+    pdf.setFont('Helvetica-Bold', 18)
+    pdf.drawString(margin, y, 'Reporte de Orden - San Vicentino')
+    y -= 30
+
+    pdf.setFont('Helvetica', 12)
+    pdf.drawString(margin, y, f'Número de Orden: {order.order_number}')
+    pdf.drawString(width / 2, y, f'Fecha: {order.created_at.strftime("%d/%m/%Y %H:%M")}')
+    y -= 20
+
+    pdf.drawString(margin, y, f'Usuario: {current_user.username}')
+    pdf.drawString(width / 2, y, f'Email: {current_user.email}')
+    y -= 30
+
+    pdf.setFont('Helvetica-Bold', 14)
+    pdf.drawString(margin, y, 'Productos')
+    y -= 20
+
+    pdf.setFont('Helvetica-Bold', 12)
+    pdf.drawString(margin, y, 'Producto')
+    pdf.drawString(width * 0.55, y, 'Cantidad')
+    pdf.drawString(width * 0.7, y, 'Precio')
+    pdf.drawString(width * 0.85, y, 'Subtotal')
+    y -= 18
+    pdf.setFont('Helvetica', 11)
+    pdf.line(margin, y + 5, width - margin, y + 5)
+    y -= 15
+
+    for item in order.items:
+        if y < margin + 100:
+            pdf.showPage()
+            y = height - margin
+        pdf.drawString(margin, y, item.product_name)
+        pdf.drawString(width * 0.55, y, str(item.quantity))
+        pdf.drawString(width * 0.7, y, f'S/. {item.price:.2f}')
+        pdf.drawString(width * 0.85, y, f'S/. {item.subtotal:.2f}')
+        y -= 18
+
+    y -= 10
+    pdf.line(margin, y, width - margin, y)
+    y -= 25
+
+    pdf.setFont('Helvetica-Bold', 12)
+    pdf.drawString(margin, y, f'Total: S/. {order.total:.2f}')
+    y -= 18
+    pdf.setFont('Helvetica', 11)
+    pdf.drawString(margin, y, f'Estado: {order.status}')
+    y -= 15
+    pdf.drawString(margin, y, f'Método de Pago: {order.payment_method}')
+
+    pdf.showPage()
+    pdf.save()
+    buffer.seek(0)
+
+    return Response(buffer.read(), mimetype='application/pdf', headers={
+        'Content-Disposition': f'attachment; filename=orden_{order.order_number}.pdf'
+    })
+
+
 @app.route('/mis-ordenes')
 @login_required
 def mis_ordenes():
@@ -507,6 +582,129 @@ def mis_ordenes():
         cart_count = cart.get_item_count()
     
     return render_template('mis_ordenes.html', orders=orders, cart_count=cart_count)
+
+
+@app.route('/orden-de-pedido', methods=['GET', 'POST'])
+@login_required
+def orden_pedido():
+    if not current_user.is_admin:
+        flash('Acceso denegado.', 'danger')
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        # Procesar el formulario y validar el contenido
+        order_number = request.form.get('order_number')
+        nombre_cliente = request.form.get('nombre_cliente', '').strip()
+        dni_ruc = request.form.get('dni_ruc', '').strip()
+        direccion = request.form.get('direccion', '').strip()
+        telefono = request.form.get('telefono', '').strip()
+        email = request.form.get('email', '').strip()
+        fecha_dia = request.form.get('fecha_dia', '').strip()
+        fecha_mes = request.form.get('fecha_mes', '').strip()
+        fecha_anio = request.form.get('fecha_anio', '').strip()
+        fecha_entrega_dia = request.form.get('fecha_entrega_dia', '').strip()
+        fecha_entrega_mes = request.form.get('fecha_entrega_mes', '').strip()
+        fecha_entrega_anio = request.form.get('fecha_entrega_anio', '').strip()
+        lugar_entrega = request.form.get('lugar_entrega', '').strip()
+        forma_envio = request.form.get('forma_envio', '').strip()
+
+        errors = []
+        if not all([nombre_cliente, dni_ruc, direccion, telefono, email]):
+            errors.append('Complete todos los datos del cliente.')
+        if not all([fecha_dia, fecha_mes, fecha_anio]):
+            errors.append('Complete la fecha del pedido.')
+        if not all([fecha_entrega_dia, fecha_entrega_mes, fecha_entrega_anio, lugar_entrega, forma_envio]):
+            errors.append('Complete todos los datos de entrega.')
+
+        total = 0
+        items = []
+        for i in range(1, 4):  # 3 filas
+            producto = request.form.get(f'producto_{i}', '').strip()
+            cantidad = request.form.get(f'cantidad_{i}', '').strip()
+            precio = request.form.get(f'precio_{i}', '').strip()
+            subtotal = request.form.get(f'subtotal_{i}', '').strip()
+
+            if producto or cantidad or precio or subtotal:
+                if not all([producto, cantidad, precio, subtotal]):
+                    errors.append(f'Complete todos los campos de la fila {i}.')
+                    continue
+                if not cantidad.isdigit():
+                    errors.append(f'Cantidad inválida en la fila {i}.')
+                    continue
+                try:
+                    precio_val = float(precio.replace(',', '.'))
+                    subtotal_val = float(subtotal.replace(',', '.'))
+                except ValueError:
+                    errors.append(f'Precio o subtotal inválido en la fila {i}.')
+                    continue
+
+                subtotal_calc = precio_val * int(cantidad)
+                if abs(subtotal_val - subtotal_calc) > 0.01:
+                    errors.append(f'El subtotal de la fila {i} no coincide con cantidad x precio.')
+                    continue
+
+                total += subtotal_calc
+                product_row = Product.query.filter_by(nombre=producto).first()
+                product_id = product_row.id if product_row else None
+                items.append({
+                    'product_id': product_id,
+                    'product_name': producto,
+                    'price': precio_val,
+                    'quantity': int(cantidad),
+                    'subtotal': subtotal_val
+                })
+
+        if not items:
+            errors.append('Debe agregar al menos un producto completo en el detalle del pedido.')
+
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+            cart_count = 0
+            cart = Cart.query.filter_by(user_id=current_user.id).first()
+            if cart:
+                cart_count = cart.get_item_count()
+            return render_template('orden_de_pedido.html', cart_count=cart_count, order_number=order_number)
+
+        # Crear la orden
+        order = Order(
+            user_id=current_user.id,
+            order_number=order_number,
+            total=total,
+            status='pendiente',
+            payment_method='yape',  # default
+            payment_status='pendiente'
+        )
+        db.session.add(order)
+        db.session.commit()
+
+        # Crear los items de la orden
+        for item in items:
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=item['product_id'],
+                product_name=item['product_name'],
+                price=item['price'],
+                quantity=item['quantity'],
+                subtotal=item['subtotal']
+            )
+            db.session.add(order_item)
+        db.session.commit()
+
+        flash('Orden creada exitosamente!', 'success')
+        return redirect(url_for('mis_ordenes'))
+
+    # GET: Generar número de pedido auto incremental
+    last_order = Order.query.order_by(Order.id.desc()).first()
+    next_id = last_order.id + 1 if last_order else 1
+    order_number = f"OP-{next_id:04d}"
+
+    cart_count = 0
+    cart = Cart.query.filter_by(user_id=current_user.id).first()
+    if cart:
+        cart_count = cart.get_item_count()
+
+    return render_template('orden_de_pedido.html', cart_count=cart_count, order_number=order_number)
 
 
 @app.route('/login/google')
@@ -693,6 +891,7 @@ def crear_producto():
             descripcion = request.form.get('descripcion')
             precio = float(request.form.get('precio', 0))
             categoria = request.form.get('categoria')
+            tipo_agua = request.form.get('tipo_agua') if categoria == 'Agua' else None
             stock = int(request.form.get('stock', 0))
             
             # Procesar imagen
@@ -716,6 +915,7 @@ def crear_producto():
                 descripcion=descripcion,
                 precio=precio,
                 categoria=categoria,
+                tipo_agua=tipo_agua,
                 imagen=imagen_url,
                 stock=stock,
                 publicado=False  # Los nuevos productos se crean sin publicar

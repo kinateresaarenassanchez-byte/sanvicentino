@@ -7,3 +7,45 @@ Para subir al github
 .gitignore
 pip install -r requirements.txt
 cd /workspaces/sanvicentino/app && /workspaces/sanvicentino/.venv/bin/python ./run.py
+
+Par ver las tablas de posgret:
+1. Asegúrate de que los contenedores estén corriendo
+docker-compose up -d
+2. Entra al contenedor de PostgreSQL
+docker-compose exec db psql -U sanvicentino_user -d sanvicentino
+3. Una vez dentro de psql, ejecuta
+\dt
+4. Para ver más detalles de una tabla
+\d nombre_de_la_tabla
+docker-compose exec db psql -U sanvicentino_user -d sanvicentino -c '\dt'
+¿Necesitas ver información específica? Puedo consultar:
+# Ver solo productos publicados
+docker-compose exec db psql -U sanvicentino_user -d sanvicentino -c "SELECT * FROM products WHERE publicado = true;"
+
+# Ver productos con bajo stock
+docker-compose exec db psql -U sanvicentino_user -d sanvicentino -c "SELECT * FROM products WHERE stock < 20;"
+
+# Contar total de productos
+docker-compose exec db psql -U sanvicentino_user -d sanvicentino -c "SELECT COUNT(*) as total FROM products;"
+VER TODAS LAS TABLAS:
+docker-compose exec db psql -U sanvicentino_user -d sanvicentino
+Una vez dentro, puedes usar:
+
+\dt - Listar todas las tablas
+\d products - Ver estructura de la tabla products
+SELECT * FROM products; - Ver datos
+\q - Salir
+
+VISUALIZAR LA TABLA PRODUCTOS:
+docker-compose exec -T db psql -U sanvicentino_user -d sanvicentino -c "
+SELECT 
+    id,
+    nombre,
+    descripcion,
+    precio,
+    categoria,
+    imagen,
+    stock,
+    publicado,
+    created_at
+FROM products;"

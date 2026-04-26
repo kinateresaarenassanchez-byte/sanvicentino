@@ -6,5 +6,7 @@ email-validator
 authlib
 python-dotenv
 pymysql
+psycopg2-binary
 Pillow
 requests
+reportlab
