@@ -57,7 +57,7 @@
         </div>
         <div class="p-4">
           <h2 class="text-xl font-semibold">{{ product.nombre }}</h2>
-          <p class="text-gray-600">{{ product.descripcion[:60] }}...</p>
+          <p class="text-gray-600">{{ (product.descripcion or '')[:60] }}{{ '...' if product.descripcion and product.descripcion|length > 60 else '' }}</p>
           <p class="text-lg font-bold text-green-600 my-2">S/. {{ "%.2f"|format(product.precio) }}</p>
           
           {% if product.stock > 0 %}

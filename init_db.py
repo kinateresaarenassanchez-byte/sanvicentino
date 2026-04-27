@@ -14,8 +14,8 @@ sys.path.insert(0, str(Path(__file__).parent / 'app'))
 instance_path = Path(__file__).resolve().parent / "instance"
 instance_path.mkdir(exist_ok=True)
 
-from run import app, db
-from models import User, Product
+from app.run import app, db
+from app.models import User, Product
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 

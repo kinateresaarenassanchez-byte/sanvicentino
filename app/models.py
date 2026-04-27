@@ -97,6 +97,11 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Datos del cliente para la entrega
+    nombre_cliente = db.Column(db.String(255))
+    direccion_entrega = db.Column(db.Text)
+    referencia = db.Column(db.Text)
+    
     # Relaciones
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
     payment = db.relationship('Payment', backref='order', uselist=False, lazy=True)
@@ -107,7 +112,7 @@ class OrderItem(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     product_name = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Float, nullable=False)
     quantity = db.Column(db.Integer, nullable=False)

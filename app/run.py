@@ -307,7 +307,7 @@ def eliminar_del_carrito(item_id):
 @app.route('/carrito/actualizar/<int:item_id>', methods=['POST'])
 @login_required
 def actualizar_carrito(item_id):
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     quantity = data.get('quantity', 1)
     
     cart_item = CartItem.query.get(item_id)
@@ -370,7 +370,7 @@ def checkout():
 @app.route('/procesar-pago', methods=['POST'])
 @login_required
 def procesar_pago():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     
     cart = Cart.query.filter_by(user_id=current_user.id).first()
     
@@ -447,11 +447,15 @@ def confirmar_pago(order_id):
     if not order or order.user_id != current_user.id:
         return jsonify({'error': 'Orden no encontrada'}), 404
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     
     try:
+        payment_method = data.get('payment_method')
+        if not payment_method:
+            return jsonify({'error': 'Método de pago no especificado'}), 400
+
         payment_details = {
-            'payment_method': data.get('payment_method'),
+            'payment_method': payment_method,
             'confirmed_at': datetime.utcnow().isoformat()
         }
         
@@ -524,7 +528,15 @@ def orden_pdf(order_id):
 
     pdf.drawString(margin, y, f'Usuario: {current_user.username}')
     pdf.drawString(width / 2, y, f'Email: {current_user.email}')
-    y -= 30
+    y -= 20
+    pdf.drawString(margin, y, f'Cliente: {order.nombre_cliente or current_user.username}')
+    y -= 18
+    pdf.drawString(margin, y, f'Dirección de Entrega: {order.direccion_entrega or "No especificada"}')
+    y -= 18
+    if order.referencia:
+        pdf.drawString(margin, y, f'Referencia: {order.referencia}')
+        y -= 18
+    y -= 12
 
     pdf.setFont('Helvetica-Bold', 14)
     pdf.drawString(margin, y, 'Productos')
@@ -592,7 +604,6 @@ def orden_pedido():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        # Procesar el formulario y validar el contenido
         order_number = request.form.get('order_number')
         nombre_cliente = request.form.get('nombre_cliente', '').strip()
         dni_ruc = request.form.get('dni_ruc', '').strip()
@@ -607,6 +618,7 @@ def orden_pedido():
         fecha_entrega_anio = request.form.get('fecha_entrega_anio', '').strip()
         lugar_entrega = request.form.get('lugar_entrega', '').strip()
         forma_envio = request.form.get('forma_envio', '').strip()
+        referencia = request.form.get('referencia', '').strip()
 
         errors = []
         if not all([nombre_cliente, dni_ruc, direccion, telefono, email]):
@@ -645,7 +657,10 @@ def orden_pedido():
 
                 total += subtotal_calc
                 product_row = Product.query.filter_by(nombre=producto).first()
-                product_id = product_row.id if product_row else None
+                if not product_row:
+                    errors.append(f'Producto "{producto}" no encontrado en la base de datos.')
+                    continue
+                product_id = product_row.id
                 items.append({
                     'product_id': product_id,
                     'product_name': producto,
@@ -673,7 +688,10 @@ def orden_pedido():
             total=total,
             status='pendiente',
             payment_method='yape',  # default
-            payment_status='pendiente'
+            payment_status='pendiente',
+            nombre_cliente=nombre_cliente,
+            direccion_entrega=direccion,
+            referencia=referencia
         )
         db.session.add(order)
         db.session.commit()
@@ -724,10 +742,18 @@ def google_authorize():
         return redirect(url_for('login'))
     
     token = google.authorize_access_token()
-    user_info = google.get('userinfo').json()
+    resp = google.get('userinfo')
+    if resp is None or resp.status_code != 200:
+        flash('No se pudo obtener la información de usuario de Google.', 'danger')
+        return redirect(url_for('login'))
 
-    email = user_info['email']
-    name = user_info.get('name', email.split('@')[0])
+    user_info = resp.json() or {}
+    email = user_info.get('email')
+    if not email:
+        flash('El correo de Google no está disponible. No se puede iniciar sesión.', 'danger')
+        return redirect(url_for('login'))
+
+    name = user_info.get('name') or email.split('@')[0]
 
     user = User.query.filter_by(email=email).first()
 

@@ -11,8 +11,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         </div>
-        <h1 class="text-4xl font-bold text-gray-800 mb-2">¡Compra Completada!</h1>
-        <p class="text-gray-600 text-lg">Gracias por tu compra. Aquí está el resumen de tu orden.</p>
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">¡Ordenes completadas!</h1>
+        <p class="text-gray-600 text-lg"> Aquí está el resumen de tus ordenes.</p>
     </div>
     
     <!-- Tarjeta principal -->
@@ -53,7 +53,7 @@
         
         <!-- Detalles de los productos -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Productos Comprados</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Detalle de pedido</h2>
             <div class="space-y-4">
                 {% for item in order.items %}
                 <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
@@ -72,7 +72,7 @@
         
         <!-- Desglose de costos -->
         <div class="mb-8 pb-8 border-b">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Desglose de Costos</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Resumen de pago</h2>
             <div class="space-y-3 max-w-md ml-auto">
                 <div class="flex justify-between text-gray-700">
                     <span>Subtotal:</span>
@@ -100,13 +100,13 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Dirección de Entrega</h2>
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <p class="text-gray-800">
-                    <strong>Cliente:</strong> {{ current_user.username }}<br>
+                    <strong>Cliente:</strong> {{ order.nombre_cliente or current_user.username }}<br>
+                    <strong>Dirección:</strong> {{ order.direccion_entrega or 'No especificada' }}<br>
+                    {% if order.referencia %}
+                    <strong>Referencia:</strong> {{ order.referencia }}<br>
+                    {% endif %}
                     <strong>Email:</strong> {{ current_user.email }}<br>
-                    <strong>Nota:</strong> Por favor, completa tu dirección en tu perfil para que podamos enviar tu pedido.
                 </p>
-                <a href="#" class="text-blue-600 hover:underline font-semibold mt-4 inline-block">
-                    Editar Dirección de Envío
-                </a>
             </div>
         </div>
         
@@ -121,12 +121,16 @@
     </div>
     
     <!-- Botones de acción -->
+    {% set whatsapp_message = 'Hola, comparto el reporte de la orden ' ~ order.order_number ~ '. Total S/. ' ~ "%.2f"|format(order.total) ~ '. Dirección de entrega: ' ~ (order.direccion_entrega or 'No especificada') ~ '. Referencia: ' ~ (order.referencia or 'No aplica') ~ '. Link PDF: ' ~ url_for('orden_pdf', order_id=order.id, _external=True) %}
     <div class="flex flex-col sm:flex-row gap-4">
         <a href="{{ url_for('mis_ordenes') }}" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition text-center">
             Ver Mis Órdenes
         </a>
         <a href="{{ url_for('orden_pdf', order_id=order.id) }}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition text-center">
             Descargar PDF
+        </a>
+        <a href="https://api.whatsapp.com/send?text={{ whatsapp_message | urlencode }}" target="_blank" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition text-center">
+            Enviar por WhatsApp
         </a>
         <a href="{{ url_for('index') }}" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition text-center">
             Seguir Comprando
